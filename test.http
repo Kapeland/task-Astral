@@ -1,0 +1,175 @@
+### Новый пользователь, плохой логин/пароль
+POST http://localhost:9085/api/register?token=T8UrXXFxHTxkW?x2PP-0fyfsYzDsxo7RwH6FNcZK=tX759FG!QxBQMGGkpVEBdVb&login=login2&pswd=pswd2
+
+### Новый пользователь, плохой логин
+POST http://localhost:9085/api/register?token=T8UrXXFxHTxkW?x2PP-0fyfsYzDsxo7RwH6FNcZK=tX759FG!QxBQMGGkpVEBdVb&login=login2&pswd=PassPass1
+
+### Новый пользователь
+POST http://localhost:9085/api/register?token=T8UrXXFxHTxkW?x2PP-0fyfsYzDsxo7RwH6FNcZK=tX759FG!QxBQMGGkpVEBdVb&login=loginLogin3&pswd=Pass:Pass3
+
+### Существующий, но другой пароль
+POST http://localhost:9085/api/register?token=T8UrXXFxHTxkW?x2PP-0fyfsYzDsxo7RwH6FNcZK=tX759FG!QxBQMGGkpVEBdVb&login=loginLogin&pswd=Pass:Pass2
+
+### Новый пользователь, но не правильный токен
+POST http://localhost:9085/api/register?token=T8UrXXFxHTxkW?x2PP-0fyfsYzDsxo7RwH6FNcZK=tX759FG!QxBQMGGkVEBdVb&login=loginLogin&pswd=Pass:Pass2
+
+### Существующий логин и пароль
+POST http://localhost:9085/api/auth
+Content-Type: application/x-www-form-urlencoded
+
+login = loginLogin2 &
+pswd = Pass:Pass2
+
+
+### Несуществующий логин/пароль
+POST http://localhost:9085/api/auth
+Content-Type: application/x-www-form-urlencoded
+
+login = loginLogi0 &
+pswd = Pass:Pass1
+
+### Существующий + несуществующий токен
+DELETE http://localhost:9085/api/auth/bRlLBwbLjk8dhhDngKvYgfJHiFNyVrFd8JtRpBrumdA8VgYEYIvUpktYZc8EpQ54
+
+
+### Add doc
+POST http://localhost:9085/api/docs
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="meta"
+Content-Type: application/json
+
+{
+  "name": "file2.txt",
+  "file": true,
+  "public": false,
+  "token": "OZnZbhGElyDYIWw2MmmdprgjTgBDJfubKnefkYyc0bZ2NDd9FghqvuqgRBsIYm9t",
+  "mime": "plain/text",
+  "grant": [
+  ]
+}
+--WebAppBoundary--
+Content-Disposition: form-data; name="json"
+Content-Type: application/json
+
+{
+  "tmp": true,
+  "tmp2": false
+}
+--WebAppBoundary--
+Content-Disposition: form-data; name="file"; filename="file1.txt"
+Content-Type: text/plain
+
+Some text inside file
+--WebAppBoundary--
+
+### Add doc without json
+POST http://localhost:9085/api/docs
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="meta"
+Content-Type: application/json
+
+{
+  "name": "file1.txt",
+  "file": true,
+  "public": false,
+  "token": "C1sZUkobHTFwflvZQeN7BexkbTT7Xa70VzbX6N5GY1m7WARlRcsYz9GQ3wJOUhWf",
+  "mime": "plain/text",
+  "grant": [
+  ]
+}
+--WebAppBoundary--
+Content-Disposition: form-data; name="file"; filename="file3.txt"
+Content-Type: text/plain
+
+Some text inside file
+--WebAppBoundary--
+
+### Add doc-json
+POST http://localhost:9085/api/docs
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="meta"
+Content-Type: application/json
+
+{
+  "name": "fileJSON1.txt",
+  "file": false,
+  "public": true,
+  "token": "C1sZUkobHTFwflvZQeN7BexkbTT7Xa70VzbX6N5GY1m7WARlRcsYz9GQ3wJOUhWf",
+  "mime": "plain/text",
+  "grant": [
+    "loginLogin2"
+  ]
+}
+--WebAppBoundary--
+Content-Disposition: form-data; name="json"
+Content-Type: application/json
+
+{
+  "tmp": true
+}
+--WebAppBoundary--
+Content-Disposition: form-data; name="file"; filename="file1.txt"
+Content-Type: application/json
+
+{
+  "tmp": true,
+  "tmp1": true,
+  "tmp2": true,
+  "tmp3": true
+}
+--WebAppBoundary--
+
+### Add doc, but no meta
+POST http://localhost:9085/api/docs
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary--
+Content-Disposition: form-data; name="json"
+Content-Type: application/json
+
+{
+  "tmp": true,
+  "tmp2": false
+}
+--WebAppBoundary--
+Content-Disposition: form-data; name="file"; filename="file1.txt"
+Content-Type: text/plain
+
+Some text inside file
+--WebAppBoundary--
+
+
+### RM doc + unexisting doc
+DELETE http://localhost:9085/api/docs/28c292b9-2acf-40b4-8e88-e20ea01c7d8b?token=C1sZUkobHTFwflvZQeN7BexkbTT7Xa70VzbX6N5GY1m7WARlRcsYz9GQ3wJOUhWf
+
+### RM doc, but bad token
+DELETE http://localhost:9085/api/docs/1f9e6c72-e63a-4da7-8d6f-cdd01018f4aa?token=C1sZUkobHTFwflvZQeN7BexkbTT7Xa70VzbX6N5GY1m7WARlRcsYz9GQ3wJOUhW
+
+### RM not your doc
+DELETE http://localhost:9085/api/docs/fb1784e4-e0fc-4885-b8d9-270fc4243822?token=C1sZUkobHTFwflvZQeN7BexkbTT7Xa70VzbX6N5GY1m7WARlRcsYz9GQ3wJOUhWf
+
+### Get doc list
+GET http://localhost:9085/api/docs?token=C1sZUkobHTFwflvZQeN7BexkbTT7Xa70VzbX6N5GY1m7WARlRcsYz9GQ3wJOUhWf&key=name&
+    value=fileJSON1.txt&limit=3
+Accept: application/json
+
+### HEAD doc list
+HEAD http://localhost:9085/api/docs?token=C1sZUkobHTFwflvZQeN7BexkbTT7Xa70VzbX6N5GY1m7WARlRcsYz9GQ3wJOUhWf&key=name&
+    value=fileJSON1.txt&limit=3
+Accept: application/json
+
+### Existing doc but not yours
+GET http://localhost:9085/api/docs/320e2c2f-9ed1-40a4-a79d-c56fa5d5c7da?token=OZnZbhGElyDYIWw2MmmdprgjTgBDJfubKnefkYyc0bZ2NDd9FghqvuqgRBsIYm9t
+
+### Existing doc but  yours
+GET http://localhost:9085/api/docs/1f9e6c72-e63a-4da7-8d6f-cdd01018f4aa?token=C1sZUkobHTFwflvZQeN7BexkbTT7Xa70VzbX6N5GY1m7WARlRcsYz9GQ3wJOUhWf
+
+###
+HEAD http://localhost:9085/api/docs/f678d21b-05c6-432c-a08f-17a362c309de?token=0NgUFlBnA1rzqtub2nsBjwdNvDt6rmFWOWlKfs2Gu2deLVQjFx4fUvc6z9oitMk2
+

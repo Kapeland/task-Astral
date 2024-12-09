@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:16
+    env_file:
+      - .env
+    restart: "unless-stopped"
+    ports:
+      - "${POSTGRES_EXPORT_PORT}:5432"
+    networks:
+      - project
+
+  project:
+    build:
+      context: .
+      dockerfile: ./build/package/Dockerfile
+    env_file:
+      - .env
+    restart: "unless-stopped"
+    ports:
+      - "${PROJECT_EXPORT_PORT}:8080"
+    depends_on:
+      - postgres
+    networks:
+      - project
+
+networks:
+  project:
+    driver: bridge
