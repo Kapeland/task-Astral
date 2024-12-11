@@ -5,23 +5,12 @@ import (
 	"time"
 )
 
-type RegisterReq struct {
-	Token string `json:"token"`
-	Login string `json:"login"`
-	Pswd  string `json:"pswd"`
-}
-
 type RegisterResp struct {
 	Resp RegisterRespBody `json:"response"`
 }
 
 type RegisterRespBody struct {
 	Login string `json:"login"`
-}
-
-type AuthReq struct {
-	Login string `json:"login"`
-	Pswd  string `json:"pswd"`
 }
 
 type AuthResp struct {
