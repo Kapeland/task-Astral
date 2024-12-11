@@ -1,5 +1,8 @@
+project:
+  debug: true
+
 # Server configuration
-server:
+rest:
   host: "localhost"
   port: 8080
 
@@ -13,4 +16,9 @@ database:
 
 admin:
   token: "T8UrXXFxHTxkW?x2PP-0fyfsYzDsxo7RwH6FNcZK=tX759FG!QxBQMGGkpVEBdVb"
+
+# Logger configuration
+logger:
+  level: "INFO"
+  rate: 1.0 # How many msgs to log
 
