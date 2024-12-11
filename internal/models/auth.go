@@ -26,6 +26,8 @@ type AuthStorager interface {
 const validHoursNum = 24
 
 func (m *ModelAuth) RegisterUser(ctx context.Context, info structs.RegisterUserInfo) error {
+	lgr := logger.GetLogger()
+
 	passHash := getHash(info.Pswd)
 	userDTO := structs.UserDTO{
 		Login:        info.Login,
@@ -36,22 +38,27 @@ func (m *ModelAuth) RegisterUser(ctx context.Context, info structs.RegisterUserI
 		if errors.Is(err, ErrConflict) {
 			return ErrConflict
 		}
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("ModelAuth: RegisterUser: CreateUser error: %s", err.Error()))
+		lgr.Error(err.Error(), "ModelAuth", "RegisterUser", "CreateUser")
+
 		return err
 	}
 
 	return nil
 }
 
+// ValidateToken checks whether token bad, expired or not authenticated.
 // Returns ErrInvalidToken or ErrTokenExpired or err
 func (m *ModelAuth) ValidateToken(ctx context.Context, token string) (bool, error) {
+	lgr := logger.GetLogger()
+
 	userSecret, err := m.as.GetUserSecretBySecret(ctx, token)
 
 	if err != nil {
 		if errors.Is(err, ErrNotFound) { //It's OK. Bad token or not authenticated
 			return false, ErrInvalidToken
 		}
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("ModelAuth: ValidateToken: GetUserSecretBySecret error: %s", err.Error()))
+		lgr.Error(err.Error(), "ModelAuth", "ValidateToken", "GetUserSecretBySecret")
+
 		return false, err
 	}
 	if userSecret.ValidUntil.Before(time.Now()) { // То есть он был, но просрочен.
@@ -62,18 +69,22 @@ func (m *ModelAuth) ValidateToken(ctx context.Context, token string) (bool, erro
 }
 
 func (m *ModelAuth) LoginUser(ctx context.Context, info structs.AuthUserInfo) (string, error) {
+	lgr := logger.GetLogger()
+
 	userDTO, err := m.us.GetUserByLogin(ctx, info.Login)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			logger.Log(logger.InfoPrefix, fmt.Sprintf("ModelAuth: GetUserByLogin: login not found: %s", info.Login))
+			lgr.Info(fmt.Sprintf("login not found: %s", info.Login), "ModelAuth", "LoginUser", "GetUserByLogin")
+
 			return "", ErrBadCredentials
 		}
+		lgr.Error(err.Error(), "ModelAuth", "LoginUser", "GetUserByLogin")
 
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("ModelAuth: LoginUser: GetUserByLogin error: %s", err.Error()))
 		return "", err
 	}
 	if userDTO.PasswordHash != getHash(info.Pswd) {
-		logger.Log(logger.InfoPrefix, fmt.Sprintf("ModelAuth: LoginUser: password is incorrect"))
+		lgr.Info("password is incorrect", "ModelAuth", "LoginUser", "GetUserByLogin")
+
 		return "", ErrBadCredentials
 	}
 
@@ -84,20 +95,21 @@ func (m *ModelAuth) LoginUser(ctx context.Context, info structs.AuthUserInfo) (s
 
 			userSecret, err := genUserSecret(info.Login)
 			if err != nil {
-				logger.Log(logger.ErrPrefix, fmt.Sprintf("ModelAuth: LoginUser: genKey error: %s", err.Error()))
+				lgr.Error(err.Error(), "ModelAuth", "LoginUser", "genKey")
 				return "", err
 			}
 
 			err = m.as.CreateUserSecret(ctx, userSecret)
 			if err != nil {
-				logger.Log(logger.ErrPrefix, fmt.Sprintf("ModelAuth: LoginUser: CreateUserSecret error: %s", err.Error()))
+				lgr.Error(err.Error(), "ModelAuth", "LoginUser", "CreateUserSecret")
+
 				return "", err
 			}
 
 			return userSecret.Token, nil
 		}
+		lgr.Error(err.Error(), "ModelAuth", "LoginUser", "GetUserSecretByLogin")
 
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("ModelAuth: GetUserSecretByLogin: error: %s", err.Error()))
 		return "", err
 	}
 
@@ -110,7 +122,8 @@ func (m *ModelAuth) LoginUser(ctx context.Context, info structs.AuthUserInfo) (s
 				return "", ErrConflict
 				// Но в теории такую ошибку не получить. Разве что токен повторится
 			}
-			logger.Log(logger.ErrPrefix, fmt.Sprintf("ModelAuth: LoginUser: UpdateUserSecret error: %s", err.Error()))
+			lgr.Error(err.Error(), "ModelAuth", "LoginUser", "UpdateUserSecret")
+
 			return "", err
 		}
 	}
@@ -119,13 +132,17 @@ func (m *ModelAuth) LoginUser(ctx context.Context, info structs.AuthUserInfo) (s
 }
 
 func (m *ModelAuth) LogoutUser(ctx context.Context, token string) error {
+	lgr := logger.GetLogger()
+
 	err := m.as.DeleteUserSecret(ctx, token)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			logger.Log(logger.InfoPrefix, fmt.Sprintf("ModelAuth: LogoutUser: DeleteUserSecret: token not found: %s", token))
+			lgr.Info(fmt.Sprintf("token not found: %s", token), "ModelAuth", "LogoutUser", "DeleteUserSecret")
+
 			return ErrTokenNotFound
 		}
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("ModelAuth: LogoutUser: DeleteUserSecret: %s", err.Error()))
+		lgr.Error(err.Error(), "ModelAuth", "LogoutUser", "DeleteUserSecret")
+
 		return err
 	}
 	return nil

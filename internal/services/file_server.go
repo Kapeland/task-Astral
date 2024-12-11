@@ -27,10 +27,12 @@ type fileServer struct {
 }
 
 func (s *fileServer) UploadDoc(c *gin.Context) {
+	lgr := logger.GetLogger()
+
 	form, err := c.MultipartForm()
 
 	if err != nil {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: UploadDoc: MultipartForm: error:%s", err.Error()))
+		lgr.Error(err.Error(), "fileServer", "UploadDoc", "MultipartForm")
 		c.JSON(http.StatusBadRequest, ErrResponse{Err: ErrBody{
 			Code: 400,
 			Text: "Bad MultipartForm",
@@ -41,7 +43,8 @@ func (s *fileServer) UploadDoc(c *gin.Context) {
 	meta, ok := form.Value["meta"]
 
 	if !ok {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: UploadDoc: no 'meta' in multipart/form"))
+		lgr.Error("no 'meta' in multipart/form", "fileServer", "UploadDoc", "MultipartForm")
+
 		c.JSON(http.StatusBadRequest, ErrResponse{Err: ErrBody{
 			Code: 400,
 			Text: "no 'meta' in multipart/form",
@@ -53,14 +56,16 @@ func (s *fileServer) UploadDoc(c *gin.Context) {
 	jsn, containsJSON := form.Value["json"]
 
 	if !containsJSON {
-		logger.Log(logger.InfoPrefix, fmt.Sprintf("fileServer: UploadDoc: no 'json' in multipart/form"))
+		lgr.Info("no 'json' in multipart/form", "fileServer", "UploadDoc", "MultipartForm")
+
 		jsn = append(jsn, "")
 	}
 
 	file, ok := form.File["file"]
 
 	if !ok {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: UploadDoc: no 'file' in multipart/form"))
+		lgr.Error("no 'file' in multipart/form", "fileServer", "UploadDoc", "MultipartForm")
+
 		c.JSON(http.StatusBadRequest, ErrResponse{Err: ErrBody{
 			Code: 400,
 			Text: "no 'file' in multipart/form",
@@ -72,7 +77,8 @@ func (s *fileServer) UploadDoc(c *gin.Context) {
 
 	err = jsoniter.Unmarshal([]byte(meta[0]), &varMeta)
 	if err != nil {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: jsoniter.Unmarshal: error:%s", err.Error()))
+		lgr.Error(err.Error(), "fileServer", "UploadDoc", "jsoniter.Unmarshal")
+
 		c.JSON(http.StatusBadRequest, ErrResponse{Err: ErrBody{
 			Code: 400,
 			Text: "look like it wrong 'meta' structure",
@@ -88,7 +94,8 @@ func (s *fileServer) UploadDoc(c *gin.Context) {
 	if doc.Meta.File {
 		err := c.SaveUploadedFile(file[0], "./file-storage/"+doc.Meta.Name)
 		if err != nil {
-			logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: SaveUploadedFile: error:%s", err.Error()))
+			lgr.Error(err.Error(), "fileServer", "UploadDoc", "SaveUploadedFile")
+
 			c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 				Code: 500,
 				Text: "Can't save uploaded file",
@@ -98,7 +105,8 @@ func (s *fileServer) UploadDoc(c *gin.Context) {
 	} else {
 		err := c.SaveUploadedFile(file[0], "./file-storage/json/"+doc.Meta.Name)
 		if err != nil {
-			logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: SaveUploadedFile: error:%s", err.Error()))
+			lgr.Error(err.Error(), "fileServer", "UploadDoc", "SaveUploadedFile")
+
 			c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 				Code: 500,
 				Text: "Can't save uploaded file",
@@ -127,7 +135,8 @@ func (s *fileServer) UploadDoc(c *gin.Context) {
 	}
 
 	if err != nil {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: jsoniter.Marshal: error:%s", err.Error()))
+		lgr.Error(err.Error(), "fileServer", "UploadDoc", "jsoniter.Marshal")
+
 		c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
 			Text: "Can't marshal response",
@@ -137,7 +146,8 @@ func (s *fileServer) UploadDoc(c *gin.Context) {
 	var tmpMap map[string]interface{}
 	err = jsoniter.Unmarshal(newData, &tmpMap)
 	if err != nil {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: jsoniter.Unmarshal: error:%s", err.Error()))
+		lgr.Error(err.Error(), "fileServer", "UploadDoc", "jsoniter.Unmarshal")
+
 		c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
 			Text: "Can't unmarshal response",
@@ -149,6 +159,8 @@ func (s *fileServer) UploadDoc(c *gin.Context) {
 }
 
 func (s *fileServer) uploadDoc(ctx context.Context, doc AddDocForm) (int, ErrResponse) {
+	lgr := logger.GetLogger()
+
 	valid, err := s.a.ValidateToken(ctx, doc.Meta.Token)
 
 	if !valid {
@@ -164,7 +176,8 @@ func (s *fileServer) uploadDoc(ctx context.Context, doc AddDocForm) (int, ErrRes
 				Text: "Token expired",
 			}}
 		}
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: ValidateToken: err:%s", err.Error()))
+		lgr.Error(err.Error(), "fileServer", "uploadDoc", "ValidateToken")
+
 		return http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
 			Text: "Internal server error",
@@ -177,7 +190,8 @@ func (s *fileServer) uploadDoc(ctx context.Context, doc AddDocForm) (int, ErrRes
 	})
 	if err != nil {
 		if errors.Is(err, models.ErrNotFound) {
-			logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: AddNewDoc: Can't find login mathing provided token"))
+			lgr.Error("Can't find login mathing provided token", "fileServer", "uploadDoc", "AddNewDoc")
+
 			return http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 				Code: 500,
 				Text: "Can't find login mathing provided token",
@@ -185,20 +199,23 @@ func (s *fileServer) uploadDoc(ctx context.Context, doc AddDocForm) (int, ErrRes
 			// На самом деле странно получить такую ошибку. То есть токен есть и он норм, а логина нет.
 		}
 		if errors.Is(err, models.ErrConflict) {
-			logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: AddNewDoc: Document already exists"))
+			lgr.Error("Document already exists", "fileServer", "uploadDoc", "AddNewDoc")
+
 			return http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 				Code: 400,
 				Text: "Duplicated doc",
 			}}
 		}
 		if errors.Is(err, models.ErrInvalidInput) {
-			logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: AddNewDoc: Can't give grants to unexisting user"))
+			lgr.Error("Can't set grants to unexisting user", "fileServer", "uploadDoc", "AddNewDoc")
+
 			return http.StatusBadRequest, ErrResponse{Err: ErrBody{
 				Code: 400,
 				Text: "Bad grants",
 			}}
 		}
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: AddNewDoc: err:%s", err.Error()))
+		lgr.Error(err.Error(), "fileServer", "uploadDoc", "AddNewDoc")
+
 		return http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
 			Text: "Internal server error",
@@ -209,6 +226,8 @@ func (s *fileServer) uploadDoc(ctx context.Context, doc AddDocForm) (int, ErrRes
 }
 
 func (s *fileServer) DeleteDoc(c *gin.Context) {
+	lgr := logger.GetLogger()
+
 	docID := c.Param("id")
 	token := c.Query("token")
 
@@ -221,7 +240,8 @@ func (s *fileServer) DeleteDoc(c *gin.Context) {
 
 	newData, err := jsoniter.Marshal(LogoutResp{jsoniter.RawMessage(fmt.Sprintf("{\"%s\":true}", doc.ID))})
 	if err != nil {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: jsoniter.Marshal: error:%s", err.Error()))
+		lgr.Error(err.Error(), "fileServer", "DeleteDoc", "jsoniter.Marshal")
+
 		c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
 			Text: "Can't marshal response",
@@ -232,7 +252,8 @@ func (s *fileServer) DeleteDoc(c *gin.Context) {
 	err = jsoniter.Unmarshal(newData, &tmp)
 
 	if err != nil {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: jsoniter.Unmarshal: error:%s", err.Error()))
+		lgr.Error(err.Error(), "fileServer", "DeleteDoc", "jsoniter.Unmarshal")
+
 		c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
 			Text: "Can't unmarshal response",
@@ -242,7 +263,8 @@ func (s *fileServer) DeleteDoc(c *gin.Context) {
 
 	err = os.Remove("./file-storage/" + doc.Name)
 	if err != nil {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: Remove: error:%s", err.Error()))
+		lgr.Error(err.Error(), "fileServer", "DeleteDoc", "Remove")
+
 		c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
 			Text: "Can't remove file from FS",
@@ -255,6 +277,8 @@ func (s *fileServer) DeleteDoc(c *gin.Context) {
 }
 
 func (s *fileServer) deleteDoc(ctx context.Context, token string, docID string) (structs.RmDoc, int, ErrResponse) {
+	lgr := logger.GetLogger()
+
 	valid, err := s.a.ValidateToken(ctx, token)
 
 	if !valid {
@@ -278,7 +302,6 @@ func (s *fileServer) deleteDoc(ctx context.Context, token string, docID string) 
 
 	doc, err := s.f.DeleteDoc(ctx, token, docID)
 	if err != nil {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf(err.Error()))
 		if errors.Is(err, models.ErrNotFound) {
 			return structs.RmDoc{}, http.StatusBadRequest, ErrResponse{Err: ErrBody{
 				Code: 400,
@@ -286,6 +309,8 @@ func (s *fileServer) deleteDoc(ctx context.Context, token string, docID string) 
 			}}
 			// На самом деле потенциально может быть такое, что логина нет, а токен есть. Но не ясно как такое может получиться.
 		}
+		lgr.Error(err.Error(), "fileServer", "deleteDoc", "DeleteDoc")
+
 		return structs.RmDoc{}, http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
 			Text: "Internal error during document deletion",
@@ -296,6 +321,8 @@ func (s *fileServer) deleteDoc(ctx context.Context, token string, docID string) 
 }
 
 func (s *fileServer) GetDocsList(c *gin.Context) {
+	lgr := logger.GetLogger()
+
 	token := c.Query("token")
 	login := c.Query("login")
 	key := c.Query("key")
@@ -303,7 +330,8 @@ func (s *fileServer) GetDocsList(c *gin.Context) {
 	limit, err := strconv.Atoi(c.Query("limit"))
 
 	if err != nil {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: strconv.Atoi: error:%s", err.Error()))
+		lgr.Error(err.Error(), "fileServer", "GetDocsList", "strconv.Atoi")
+
 		c.JSON(http.StatusBadRequest, ErrResponse{Err: ErrBody{
 			Code: 400,
 			Text: "bad limit val",
@@ -339,6 +367,8 @@ func (s *fileServer) GetDocsList(c *gin.Context) {
 }
 
 func (s *fileServer) getDocsList(ctx context.Context, listInfo GetDocListReq) ([]structs.DocEntry, int, ErrResponse) {
+	lgr := logger.GetLogger()
+
 	valid, err := s.a.ValidateToken(ctx, listInfo.Token)
 
 	if !valid {
@@ -354,7 +384,7 @@ func (s *fileServer) getDocsList(ctx context.Context, listInfo GetDocListReq) ([
 				Text: "Token expired",
 			}}
 		}
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: ValidateToken: err:%s", err.Error()))
+		lgr.Error(err.Error(), "fileServer", "getDocsList", "ValidateToken")
 
 		return []structs.DocEntry{}, http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
@@ -363,7 +393,8 @@ func (s *fileServer) getDocsList(ctx context.Context, listInfo GetDocListReq) ([
 	}
 	docs, err := s.f.GetDocs(ctx, structs.ListInfo(listInfo))
 	if err != nil && !errors.Is(err, models.ErrNotFound) {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf(err.Error()))
+		lgr.Error(err.Error(), "fileServer", "getDocsList", "GetDocs")
+
 		return []structs.DocEntry{}, http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
 			Text: "Intermal server error",
@@ -374,6 +405,8 @@ func (s *fileServer) getDocsList(ctx context.Context, listInfo GetDocListReq) ([
 }
 
 func (s *fileServer) GetDoc(c *gin.Context) {
+	lgr := logger.GetLogger()
+
 	docID := c.Param("id")
 	token := c.Query("token")
 
@@ -392,7 +425,8 @@ func (s *fileServer) GetDoc(c *gin.Context) {
 		data, err := os.ReadFile("./file-storage/json/" + doc.Name)
 		newData, err := jsoniter.Marshal(jsoniter.RawMessage(fmt.Sprintf("{\"data\": %s}", string(data))))
 		if err != nil {
-			logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: jsoniter.Marshal: error:%s", err.Error()))
+			lgr.Error(err.Error(), "fileServer", "GetDoc", "jsoniter.Marshal")
+
 			c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 				Code: 500,
 				Text: "Can't marshal response",
@@ -403,7 +437,8 @@ func (s *fileServer) GetDoc(c *gin.Context) {
 		err = jsoniter.Unmarshal(newData, &tmp)
 
 		if err != nil {
-			logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: jsoniter.Unmarshal: error:%s", err.Error()))
+			lgr.Error(err.Error(), "fileServer", "GetDoc", "jsoniter.Unmarshal")
+
 			c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 				Code: 500,
 				Text: "Can't unmarshal response",
@@ -416,6 +451,8 @@ func (s *fileServer) GetDoc(c *gin.Context) {
 }
 
 func (s *fileServer) getDoc(ctx context.Context, token string, docID string) (structs.GetDocDTO, int, ErrResponse) {
+	lgr := logger.GetLogger()
+
 	valid, err := s.a.ValidateToken(ctx, token)
 
 	if !valid {
@@ -431,7 +468,7 @@ func (s *fileServer) getDoc(ctx context.Context, token string, docID string) (st
 				Text: "Token expired",
 			}}
 		}
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("fileServer: ValidateToken: err:%s", err.Error()))
+		lgr.Error(err.Error(), "fileServer", "getDoc", "ValidateToken")
 
 		return structs.GetDocDTO{}, http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
@@ -453,7 +490,8 @@ func (s *fileServer) getDoc(ctx context.Context, token string, docID string) (st
 				Text: "Forbidden",
 			}}
 		}
-		logger.Log(logger.ErrPrefix, fmt.Sprintf(err.Error()))
+		lgr.Error(err.Error(), "fileServer", "getDoc", "GetDoc")
+
 		return structs.GetDocDTO{}, http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
 			Text: "Internal server error during getting document",

@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"github.com/Kapeland/task-Astral/internal/models"
 	"github.com/Kapeland/task-Astral/internal/services"
 	"github.com/Kapeland/task-Astral/internal/storage"
@@ -11,14 +10,23 @@ import (
 	"github.com/Kapeland/task-Astral/internal/storage/repository/postgresql/auth"
 	"github.com/Kapeland/task-Astral/internal/storage/repository/postgresql/files"
 	"github.com/Kapeland/task-Astral/internal/storage/repository/postgresql/users"
+	"github.com/Kapeland/task-Astral/internal/utils/config"
 	"github.com/Kapeland/task-Astral/internal/utils/logger"
+	"log"
 )
 
 func Start() error {
+	if err := config.ReadConfigYAML(); err != nil {
+		log.Fatal("Failed init configuration")
+	}
+	cfg := config.GetConfig()
+
+	lgr := logger.CreateLogger(&cfg)
+
 	ctx := context.Background()
 	dbStor, err := storage.NewDbStorage(ctx)
 	if err != nil {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("App: Start: NewDbStorage: %s", err.Error()))
+		lgr.Error(err.Error(), "App", "Start", "NewDbStorage")
 		return err
 	}
 	defer dbStor.Close(ctx)
@@ -41,7 +49,7 @@ func Start() error {
 
 	serv := services.NewService(&fmdl, &amdl, &umdl)
 
-	serv.Launch()
+	serv.Launch(&cfg, &lgr)
 
 	return nil
 }

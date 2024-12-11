@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Kapeland/task-Astral/internal/utils/configer"
+	"github.com/Kapeland/task-Astral/internal/utils/config"
 	"github.com/Kapeland/task-Astral/internal/utils/logger"
 	"github.com/gin-gonic/gin"
 	jsoniter "github.com/json-iterator/go"
@@ -78,18 +78,13 @@ func (s *authServer) Register(c *gin.Context) {
 	token := c.Query("token")
 	login := c.Query("login")
 	pswd := c.Query("pswd")
-	cfg, err := configer.GetConfig()
-	if err != nil {
-		logger.Log(logger.ErrPrefix, fmt.Sprintf("authServer: Register: configer.GetConfig error: %s", err.Error()))
-		c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
-			Code: 500,
-			Text: "GetConfig error",
-		}})
-		return
-	}
+	cfg := config.GetConfig()
+
+	lgr := logger.GetLogger()
 
 	if cfg.Admin.Token != token { // It's not admin
-		logger.Log(logger.InfoPrefix, fmt.Sprintf("authServer: Register: Not admin"))
+		lgr.Info("Not admin", "authServer", "Register", "")
+
 		c.JSON(http.StatusForbidden, ErrResponse{Err: ErrBody{
 			Code: 403,
 			Text: "Not admin",
@@ -97,7 +92,8 @@ func (s *authServer) Register(c *gin.Context) {
 		return
 	}
 	if !IsLoginPswdValid(login, pswd) { // bad password or login
-		logger.Log(logger.InfoPrefix, fmt.Sprintf("authServer: Register: Bad pass or login"))
+		lgr.Info("Bad pass or login", "authServer", "Register", "IsLoginPswdValid")
+
 		c.JSON(http.StatusBadRequest, ErrResponse{Err: ErrBody{
 			Code: 400,
 			Text: "Bad pass or login",
@@ -112,7 +108,8 @@ func (s *authServer) Register(c *gin.Context) {
 	status := s.register(c.Request.Context(), userInfo)
 
 	if status == http.StatusBadRequest {
-		logger.Log(logger.InfoPrefix, fmt.Sprintf("authServer: register: item already exists"))
+		lgr.Info("item already exists", "authServer", "Register", "register")
+
 		c.JSON(status, ErrResponse{Err: ErrBody{
 			Code: status,
 			Text: "item already exists",
@@ -120,7 +117,7 @@ func (s *authServer) Register(c *gin.Context) {
 		return
 	}
 	if status == http.StatusInternalServerError {
-		logger.Log(logger.InfoPrefix, fmt.Sprintf("authServer: register: internal server error"))
+		lgr.Error("internal server error", "authServer", "Register", "register")
 		c.JSON(status, ErrResponse{Err: ErrBody{
 			Code: status,
 			Text: "internal server error",
@@ -132,9 +129,12 @@ func (s *authServer) Register(c *gin.Context) {
 }
 
 func (s *authServer) register(ctx context.Context, info structs.RegisterUserInfo) int {
+	lgr := logger.GetLogger()
+
 	err := s.a.RegisterUser(ctx, info)
 	if err != nil {
-		logger.Log(logger.InfoPrefix, fmt.Sprintf("authServer: RegisterUser: Error: %s", err.Error()))
+		lgr.Error(err.Error(), "authServer", "register", "RegisterUser")
+
 		if errors.Is(err, models.ErrConflict) {
 			return http.StatusBadRequest
 		}
@@ -145,11 +145,14 @@ func (s *authServer) register(ctx context.Context, info structs.RegisterUserInfo
 }
 
 func (s *authServer) Auth(c *gin.Context) {
+	lgr := logger.GetLogger()
+
 	login := c.PostForm("login")
 	pswd := c.PostForm("pswd")
 
 	if !IsLoginPswdValid(login, pswd) { // bad password or login
-		logger.Log(logger.InfoPrefix, fmt.Sprintf("authServer: Auth: Bad pass or login"))
+		lgr.Info("Bad pass or login", "authServer", "Auth", "")
+
 		c.JSON(http.StatusBadRequest, ErrResponse{Err: ErrBody{
 			Code: 400,
 			Text: "Bad pass or login",
@@ -172,10 +175,10 @@ func (s *authServer) Auth(c *gin.Context) {
 }
 
 func (s *authServer) auth(ctx context.Context, info structs.AuthUserInfo) (string, int, ErrResponse) {
+	lgr := logger.GetLogger()
+
 	token, err := s.a.LoginUser(ctx, info)
 	if err != nil {
-		logger.Log(logger.InfoPrefix, fmt.Sprintf("authServer: LoginUser: Error: %s", err.Error()))
-
 		if errors.Is(err, models.ErrBadCredentials) {
 			return "", http.StatusBadRequest, ErrResponse{Err: ErrBody{
 				Code: 400,
@@ -188,6 +191,8 @@ func (s *authServer) auth(ctx context.Context, info structs.AuthUserInfo) (strin
 				Text: "Generated duplicated token",
 			}}
 		}
+
+		lgr.Error(err.Error(), "authServer", "auth", "LoginUser")
 		return "", http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
 			Text: "Internal server error",
@@ -198,6 +203,8 @@ func (s *authServer) auth(ctx context.Context, info structs.AuthUserInfo) (strin
 }
 
 func (s *authServer) Logout(c *gin.Context) {
+	lgr := logger.GetLogger()
+
 	tokenP := c.Param("token")
 
 	token, status, errResp := s.logout(c.Request.Context(), tokenP)
@@ -209,7 +216,8 @@ func (s *authServer) Logout(c *gin.Context) {
 
 	newData, err := jsoniter.Marshal(LogoutResp{jsoniter.RawMessage(fmt.Sprintf("{\"%s\":true}", token))})
 	if err != nil {
-		logger.Log(logger.InfoPrefix, fmt.Sprintf("authServer: Logout: soniter.Marshal err:%s", err.Error()))
+		lgr.Error(err.Error(), "authServer", "Logout", "soniter.Marshal")
+
 		c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
 			Text: "Can't marshal JSON",
@@ -220,7 +228,8 @@ func (s *authServer) Logout(c *gin.Context) {
 	err = jsoniter.Unmarshal(newData, &tmp)
 
 	if err != nil {
-		logger.Log(logger.InfoPrefix, fmt.Sprintf("authServer: Logout: soniter.Unmarshal err:%s", err.Error()))
+		lgr.Error(err.Error(), "authServer", "Logout", "soniter.Unmarshal")
+
 		c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 			Code: 500,
 			Text: "Can't unmarshal JSON",
