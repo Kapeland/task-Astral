@@ -2,14 +2,24 @@ package main
 
 import (
 	"github.com/Kapeland/task-Astral/internal/app"
+	"github.com/Kapeland/task-Astral/internal/utils/config"
+	"github.com/Kapeland/task-Astral/internal/utils/logger"
 	"log"
+	"log/slog"
 )
 
 func main() {
-	log.Print("app started")
-	err := app.Start()
-	if err != nil {
-		log.Fatal(err)
+	if err := config.ReadConfigYAML(); err != nil {
+		log.Fatal("Failed init configuration")
 	}
-	log.Print("app finished")
+	cfg := config.GetConfig()
+	lgr := logger.CreateLogger(&cfg)
+
+	lgr.Info("app started", "main", "", "")
+	err := app.Start(&cfg, &lgr)
+	if err != nil {
+		slog.Error(err.Error())
+		return
+	}
+	lgr.Info("app finished", "main", "", "")
 }
