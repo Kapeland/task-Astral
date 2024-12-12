@@ -13,6 +13,8 @@ database:
   user: "postgres"
   password: "password"
   name: "db_Astral"
+  sslmode: disable
+  migrations: postgres/migrations
 
 admin:
   token: "T8UrXXFxHTxkW?x2PP-0fyfsYzDsxo7RwH6FNcZK=tX759FG!QxBQMGGkpVEBdVb"
