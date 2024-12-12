@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"flag"
 	"github.com/Kapeland/task-Astral/internal/models"
 	"github.com/Kapeland/task-Astral/internal/services"
 	"github.com/Kapeland/task-Astral/internal/storage"
@@ -12,24 +13,27 @@ import (
 	"github.com/Kapeland/task-Astral/internal/storage/repository/postgresql/users"
 	"github.com/Kapeland/task-Astral/internal/utils/config"
 	"github.com/Kapeland/task-Astral/internal/utils/logger"
-	"log"
+	"github.com/pressly/goose/v3"
 )
 
-func Start() error {
-	if err := config.ReadConfigYAML(); err != nil {
-		log.Fatal("Failed init configuration")
-	}
-	cfg := config.GetConfig()
-
-	lgr := logger.CreateLogger(&cfg)
+func Start(cfg *config.Config, lgr *logger.Logger) error {
+	migration := flag.Bool("migration", true, "Defines the migration start option")
+	flag.Parse()
 
 	ctx := context.Background()
-	dbStor, err := storage.NewDbStorage(ctx)
+	dbStor, err := storage.NewPostgresStorage(ctx)
 	if err != nil {
-		lgr.Error(err.Error(), "App", "Start", "NewDbStorage")
+		lgr.Error(err.Error(), "App", "Start", "NewPostgresStorage")
 		return err
 	}
-	defer dbStor.Close(ctx)
+	defer dbStor.Close()
+	if *migration {
+		if err := goose.Up(dbStor.DB.GetDB().DB, cfg.Database.Migrations); err != nil {
+			lgr.Error("Migration failed: "+err.Error(), "App", "Start", " goose.Up")
+
+			return err
+		}
+	}
 
 	filesRepo := files.New(dbStor.DB)
 	usersRepo := users.New(dbStor.DB)
@@ -49,7 +53,7 @@ func Start() error {
 
 	serv := services.NewService(&fmdl, &amdl, &umdl)
 
-	serv.Launch(&cfg, &lgr)
+	serv.Launch(cfg, lgr)
 
 	return nil
 }
