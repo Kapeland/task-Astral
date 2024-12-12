@@ -28,11 +28,13 @@ type Rest struct {
 
 // Database - contains all parameters database connection.
 type Database struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Name     string `yaml:"name"`
+	Host       string `yaml:"host"`
+	Port       int    `yaml:"port"`
+	User       string `yaml:"user"`
+	Password   string `yaml:"password"`
+	Name       string `yaml:"name"`
+	Migrations string `yaml:"migrations"`
+	SslMode    string `yaml:"sslmode"`
 }
 
 // Admin - contains admin's token
