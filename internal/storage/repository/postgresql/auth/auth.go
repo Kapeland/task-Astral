@@ -7,8 +7,8 @@ import (
 	"github.com/Kapeland/task-Astral/internal/models/structs"
 	"github.com/Kapeland/task-Astral/internal/storage/db"
 	"github.com/Kapeland/task-Astral/internal/storage/repository"
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
+	"log/slog"
 )
 
 type Repo struct {
@@ -22,17 +22,19 @@ func New(db db.DBops) *Repo {
 // CreateUserSecret create user secret
 // Returns epository.ErrDuplicateKey or err
 func (r *Repo) CreateUserSecret(ctx context.Context, secretDTO *structs.UserSecretDTO) error {
-	tmp := ""
-	err := r.db.ExecQueryRow(ctx,
+
+	res, err := r.db.(*db.PgDatabase).NamedExec(ctx,
 		`INSERT INTO auth_schema.users_auth(login, valid_until, token)
-				VALUES($1,$2, $3) returning login;`, secretDTO.Login, secretDTO.ValidUntil, secretDTO.Token).Scan(&tmp)
+				VALUES(:login, :valid_until, :token);`, secretDTO)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		errors.As(err, &pgErr)
-		if pgErr.Code == "23505" {
-			return repository.ErrDuplicateKey
-		}
+		slog.Error(err.Error())
 		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		slog.Error(err.Error())
+	}
+	if rows == 0 {
 	}
 	return nil
 }
@@ -40,7 +42,7 @@ func (r *Repo) CreateUserSecret(ctx context.Context, secretDTO *structs.UserSecr
 // DeleteUserSecret delete user secret
 // Returns repository.ErrObjectNotFound or err
 func (r *Repo) DeleteUserSecret(ctx context.Context, token string) error {
-	tag, err := r.db.Exec(ctx,
+	res, err := r.db.Exec(ctx,
 		`DELETE FROM auth_schema.users_auth
 	  			WHERE token = $1 ;`, token)
 	if err != nil {
@@ -49,7 +51,12 @@ func (r *Repo) DeleteUserSecret(ctx context.Context, token string) error {
 		}
 		return err
 	}
-	if tag.RowsAffected() == 0 {
+	rows, err := res.RowsAffected()
+	if err != nil {
+		slog.Error(err.Error())
+		return err
+	}
+	if rows == 0 {
 		return repository.ErrObjectNotFound
 	}
 	return nil
@@ -74,17 +81,18 @@ func (r *Repo) GetSecretByLogin(ctx context.Context, login string) (*structs.Use
 // UpdateUserSecret update secret
 // Returns repository.ErrDuplicateKey or err
 func (r *Repo) UpdateUserSecret(ctx context.Context, secretDTO *structs.UserSecretDTO) error {
-	token := ""
-	err := r.db.ExecQueryRow(ctx,
+	res, err := r.db.Exec(ctx,
 		`UPDATE auth_schema.users_auth set
-				valid_until = $1 returning token;`, secretDTO.ValidUntil).Scan(&token)
+				valid_until = $1 where token=$2;`, secretDTO.ValidUntil, secretDTO.Token)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		errors.As(err, &pgErr)
-		if pgErr.Code == "23505" {
-			return repository.ErrDuplicateKey
-		}
+		slog.Error(err.Error())
 		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		slog.Error(err.Error())
+	}
+	if rows == 0 {
 	}
 	return nil
 }
