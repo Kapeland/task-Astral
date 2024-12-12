@@ -7,8 +7,8 @@ import (
 	"github.com/Kapeland/task-Astral/internal/models/structs"
 	"github.com/Kapeland/task-Astral/internal/storage/db"
 	"github.com/Kapeland/task-Astral/internal/storage/repository"
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type Repo struct {
@@ -22,7 +22,7 @@ func New(db db.DBops) *Repo {
 // CreateUser create user
 func (r *Repo) CreateUser(ctx context.Context, user *structs.UserDTO) (int, error) {
 	id := 0
-	err := r.db.ExecQueryRow(ctx,
+	err := r.db.QueryRow(ctx,
 		`INSERT INTO users_schema.users(login, password_hash)
 				VALUES($1,$2) returning id;`, user.Login, user.PasswordHash).Scan(&id)
 
