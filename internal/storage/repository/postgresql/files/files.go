@@ -6,9 +6,10 @@ import (
 	"github.com/Kapeland/task-Astral/internal/models/structs"
 	"github.com/Kapeland/task-Astral/internal/storage/db"
 	"github.com/Kapeland/task-Astral/internal/storage/repository"
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pkg/errors"
+	"log/slog"
 	"math"
 	"time"
 )
@@ -18,21 +19,19 @@ type Repo struct {
 }
 
 func (m *Repo) AddGrants(ctx context.Context, docID string, userLogin string) error {
-	tmpID := 0
-	err := m.db.ExecQueryRow(ctx,
+	res, err := m.db.Exec(ctx,
 		`INSERT INTO documentaccess(document_id, login)
-				VALUES($1,$2) returning id;`, docID, userLogin).Scan(&tmpID)
+				VALUES($1,$2) returning id;`, docID, userLogin)
 
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		var pgErr *pgconn.PgError
-		errors.As(err, &pgErr)
-		if pgErr.Code == "23505" {
-			return repository.ErrDuplicateKey
-		}
-		if pgErr.Code == "23503" {
-			return repository.ErrAddGrantToLogin
-		}
+	if err != nil {
+		slog.Error(err.Error())
 		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		slog.Error(err.Error())
+	}
+	if rows == 0 {
 	}
 
 	return nil
@@ -150,25 +149,28 @@ func (m *Repo) GetAllDocsByOwner(ctx context.Context, listInfo structs.ListInfo,
 // DelDoc  deletes doc in postgres
 func (m *Repo) DelDoc(ctx context.Context, docID string, userLogin string) (structs.RmDoc, error) {
 	tmpID, tmpTitle := "", ""
-	err := m.db.ExecQueryRow(ctx,
+	err := m.db.QueryRow(ctx,
 		`DELETE FROM documents WHERE id = $1 and owner = $2 returning id, title;`, docID, userLogin).Scan(&tmpID, &tmpTitle)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows) {
-			return structs.RmDoc{}, repository.ErrObjectNotFound
-		}
+
+	switch {
+	case err != nil && (errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows)):
+		return structs.RmDoc{}, repository.ErrObjectNotFound
+	case err != nil:
 		return structs.RmDoc{}, err
+	default:
+		return structs.RmDoc{
+			ID:   tmpID,
+			Name: tmpTitle,
+		}, nil
+
 	}
 
-	return structs.RmDoc{
-		ID:   tmpID,
-		Name: tmpTitle,
-	}, nil
 }
 
 // PostNewDoc add doc info to postgres
 func (m *Repo) PostNewDoc(ctx context.Context, fileDTO *structs.FileDTO, owner string) (string, error) {
 	id := ""
-	err := m.db.ExecQueryRow(ctx,
+	err := m.db.QueryRow(ctx,
 		`INSERT INTO documents(title, content, mime, owner, is_public, created_at, file)
 				VALUES($1,$2,$3,$4,$5,$6,$7) returning id;`, fileDTO.Meta.Name, string(fileDTO.Json), fileDTO.Meta.Mime, owner, fileDTO.Meta.Public, time.Now(), fileDTO.Meta.File).Scan(&id)
 
