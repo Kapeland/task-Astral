@@ -63,15 +63,13 @@ func CreateLogger(cfg *config.Config) Logger {
 	}
 
 	opts := &slog.HandlerOptions{
-		Level:     logLevel,
-		AddSource: true,
+		Level: logLevel,
 	}
 
 	var handler slog.Handler = slog.NewTextHandler(os.Stdout, opts)
 
 	if !cfg.Project.Debug {
 		handler = slog.NewJSONHandler(os.Stdout, opts)
-		opts.AddSource = false
 	}
 	logger = &Logger{
 		Logger: slog.New(
