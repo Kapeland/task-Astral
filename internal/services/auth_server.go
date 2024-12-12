@@ -112,7 +112,7 @@ func (s *authServer) Register(c *gin.Context) {
 
 		c.JSON(status, ErrResponse{Err: ErrBody{
 			Code: status,
-			Text: "item already exists",
+			Text: "User already exists",
 		}})
 		return
 	}
@@ -120,7 +120,7 @@ func (s *authServer) Register(c *gin.Context) {
 		lgr.Error("internal server error", "authServer", "Register", "register")
 		c.JSON(status, ErrResponse{Err: ErrBody{
 			Code: status,
-			Text: "internal server error",
+			Text: "Internal server error",
 		}})
 		return
 	}
@@ -133,11 +133,12 @@ func (s *authServer) register(ctx context.Context, info structs.RegisterUserInfo
 
 	err := s.a.RegisterUser(ctx, info)
 	if err != nil {
-		lgr.Error(err.Error(), "authServer", "register", "RegisterUser")
-
 		if errors.Is(err, models.ErrConflict) {
 			return http.StatusBadRequest
 		}
+
+		lgr.Error(err.Error(), "authServer", "register", "RegisterUser")
+
 		return http.StatusInternalServerError
 	}
 
