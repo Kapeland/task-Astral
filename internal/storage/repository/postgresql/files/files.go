@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pkg/errors"
-	"log/slog"
 	"math"
 	"time"
 )
@@ -18,27 +17,28 @@ type Repo struct {
 	db db.DBops
 }
 
+func New(db db.DBops) *Repo {
+	return &Repo{db: db}
+}
+
 func (m *Repo) AddGrants(ctx context.Context, docID string, userLogin string) error {
-	res, err := m.db.Exec(ctx,
+	_, err := m.db.Exec(ctx,
 		`INSERT INTO documentaccess(document_id, login)
 				VALUES($1,$2) returning id;`, docID, userLogin)
 
-	if err != nil {
-		slog.Error(err.Error())
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		var pgErr *pgconn.PgError
+		errors.As(err, &pgErr)
+		if pgErr.Code == "23505" {
+			return repository.ErrDuplicateKey
+		}
+		if pgErr.Code == "23503" {
+			return repository.ErrAddGrantToLogin
+		}
 		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		slog.Error(err.Error())
-	}
-	if rows == 0 {
 	}
 
 	return nil
-}
-
-func New(db db.DBops) *Repo {
-	return &Repo{db: db}
 }
 
 // GetAllDocsByOwner returns all docs belonging to an owner from postgres
@@ -169,6 +169,7 @@ func (m *Repo) DelDoc(ctx context.Context, docID string, userLogin string) (stru
 
 // PostNewDoc add doc info to postgres
 func (m *Repo) PostNewDoc(ctx context.Context, fileDTO *structs.FileDTO, owner string) (string, error) {
+	//TODO: По сути тут не учитывается есть ли такой документ. Хотя дальше это предполагается.
 	id := ""
 	err := m.db.QueryRow(ctx,
 		`INSERT INTO documents(title, content, mime, owner, is_public, created_at, file)
