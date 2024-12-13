@@ -6,8 +6,9 @@ import (
 )
 
 type UsersStorager interface {
-	CreateUser(ctx context.Context, user structs.UserDTO) (int, error)
-	GetUserByLogin(ctx context.Context, login string) (structs.UserDTO, error)
+	CreateUser(ctx context.Context, info structs.RegisterUserInfo) (int, error)
+	GetUserByLogin(ctx context.Context, login string) (structs.User, error)
+	CheckPassword(ctx context.Context, info structs.AuthUserInfo) (bool, error)
 }
 
 // Implement if necessary

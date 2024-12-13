@@ -3,8 +3,6 @@ package models
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -28,12 +26,7 @@ const validHoursNum = 24
 func (m *ModelAuth) RegisterUser(ctx context.Context, info structs.RegisterUserInfo) error {
 	lgr := logger.GetLogger()
 
-	passHash := getHash(info.Pswd)
-	userDTO := structs.UserDTO{
-		Login:        info.Login,
-		PasswordHash: passHash,
-	}
-	_, err := m.us.CreateUser(ctx, userDTO)
+	_, err := m.us.CreateUser(ctx, info)
 	if err != nil {
 		if errors.Is(err, ErrConflict) {
 			return ErrConflict
@@ -71,19 +64,14 @@ func (m *ModelAuth) ValidateToken(ctx context.Context, token string) (bool, erro
 func (m *ModelAuth) LoginUser(ctx context.Context, info structs.AuthUserInfo) (string, error) {
 	lgr := logger.GetLogger()
 
-	userDTO, err := m.us.GetUserByLogin(ctx, info.Login)
+	isPassCorrect, err := m.us.CheckPassword(ctx, info)
 	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			lgr.Info(fmt.Sprintf("login not found: %s", info.Login), "ModelAuth", "LoginUser", "GetUserByLogin")
-
-			return "", ErrBadCredentials
-		}
-		lgr.Error(err.Error(), "ModelAuth", "LoginUser", "GetUserByLogin")
+		lgr.Error(err.Error(), "ModelAuth", "LoginUser", "CheckPassword")
 
 		return "", err
 	}
-	if userDTO.PasswordHash != getHash(info.Pswd) {
-		lgr.Info("password is incorrect", "ModelAuth", "LoginUser", "GetUserByLogin")
+	if !isPassCorrect {
+		lgr.Info("login or password is incorrect", "ModelAuth", "LoginUser", "CheckPassword")
 
 		return "", ErrBadCredentials
 	}
@@ -146,12 +134,6 @@ func (m *ModelAuth) LogoutUser(ctx context.Context, token string) error {
 		return err
 	}
 	return nil
-}
-
-func getHash(pass string) string {
-	hash := sha256.New()
-	hash.Write([]byte(pass))
-	return hex.EncodeToString(hash.Sum(nil))
 }
 
 func genKey(length int) (string, error) {

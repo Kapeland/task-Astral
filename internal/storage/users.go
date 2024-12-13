@@ -9,8 +9,9 @@ import (
 )
 
 type UsersRepo interface {
-	CreateUser(ctx context.Context, user *structs.UserDTO) (int, error)
-	GetUserByLogin(ctx context.Context, login string) (*structs.UserDTO, error)
+	CreateUser(ctx context.Context, info structs.RegisterUserInfo) (int, error)
+	GetUserByLogin(ctx context.Context, login string) (*structs.User, error)
+	VerifyPassword(ctx context.Context, info structs.AuthUserInfo) (bool, error)
 }
 
 type UsersStorage struct {
@@ -22,8 +23,8 @@ func NewUsersStorage(usersRepo UsersRepo) UsersStorage {
 }
 
 // CreateUser user
-func (s *UsersStorage) CreateUser(ctx context.Context, user structs.UserDTO) (int, error) {
-	id, err := s.usersRepo.CreateUser(ctx, &user)
+func (s *UsersStorage) CreateUser(ctx context.Context, info structs.RegisterUserInfo) (int, error) {
+	id, err := s.usersRepo.CreateUser(ctx, info)
 	if err != nil {
 		if errors.Is(err, repository.ErrDuplicateKey) {
 			return id, models.ErrConflict
@@ -35,13 +36,22 @@ func (s *UsersStorage) CreateUser(ctx context.Context, user structs.UserDTO) (in
 }
 
 // GetUserByLogin user
-func (s *UsersStorage) GetUserByLogin(ctx context.Context, login string) (structs.UserDTO, error) {
+func (s *UsersStorage) GetUserByLogin(ctx context.Context, login string) (structs.User, error) {
 	user, err := s.usersRepo.GetUserByLogin(ctx, login)
 	if err != nil {
 		if errors.Is(err, repository.ErrObjectNotFound) {
-			return structs.UserDTO{}, models.ErrNotFound
+			return structs.User{}, models.ErrNotFound
 		}
-		return structs.UserDTO{}, err
+		return structs.User{}, err
 	}
 	return *user, nil
+}
+
+// CheckPassword user
+func (s *UsersStorage) CheckPassword(ctx context.Context, info structs.AuthUserInfo) (bool, error) {
+	ok, err := s.usersRepo.VerifyPassword(ctx, info)
+	if err != nil {
+		return false, err
+	}
+	return ok, nil
 }
