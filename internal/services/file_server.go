@@ -192,21 +192,21 @@ func (s *fileServer) uploadDoc(ctx context.Context, doc AddDocForm) (int, ErrRes
 		switch {
 		case errors.Is(err, models.ErrNotFound):
 			lgr.Error("Can't find login mathing provided token", "fileServer", "uploadDoc", "AddNewDoc")
-
+			// На самом деле странно получить такую ошибку. То есть токен есть и он норм, а логина нет.
 			return http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 				Code: 500,
 				Text: "Can't find login mathing provided token",
 			}}
-		// На самом деле странно получить такую ошибку. То есть токен есть и он норм, а логина нет.
+
 		case errors.Is(err, models.ErrConflict):
-			lgr.Error("Document already exists", "fileServer", "uploadDoc", "AddNewDoc")
+			lgr.Info("Document already exists", "fileServer", "uploadDoc", "AddNewDoc")
 
 			return http.StatusInternalServerError, ErrResponse{Err: ErrBody{
 				Code: 400,
 				Text: "Duplicated doc",
 			}}
 		case errors.Is(err, models.ErrInvalidInput):
-			lgr.Error("Can't set grants to unexisting user", "fileServer", "uploadDoc", "AddNewDoc")
+			lgr.Info("Can't set grants to unexisting user", "fileServer", "uploadDoc", "AddNewDoc")
 
 			return http.StatusBadRequest, ErrResponse{Err: ErrBody{
 				Code: 400,
