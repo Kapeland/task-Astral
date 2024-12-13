@@ -2,6 +2,8 @@
 -- +goose StatementBegin
 create schema if not exists users_schema;
 
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 drop table if exists users_schema.users cascade;
 
 CREATE TABLE if not exists users_schema.users
