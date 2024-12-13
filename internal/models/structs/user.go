@@ -7,11 +7,10 @@ type RegisterUserInfo struct {
 	Pswd  string `json:"pswd"`
 }
 
-// UserDTO dto
-type UserDTO struct {
-	ID           int    `db:"id"`
-	Login        string `db:"login"`
-	PasswordHash string `db:"password_hash"`
+type User struct {
+	ID       int    `db:"id"`
+	Login    string `db:"login"`
+	PswdHash string `db:"password_hash"`
 }
 
 type AuthUserInfo struct {
