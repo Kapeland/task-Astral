@@ -1,4 +1,4 @@
-package services
+package structs
 
 import (
 	jsoniter "github.com/json-iterator/go"
