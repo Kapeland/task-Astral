@@ -1,9 +1,10 @@
-package services
+package servers
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	structs2 "github.com/Kapeland/task-Astral/internal/services/structs"
 	"github.com/Kapeland/task-Astral/internal/utils/config"
 	"github.com/Kapeland/task-Astral/internal/utils/logger"
 	"github.com/gin-gonic/gin"
@@ -22,8 +23,8 @@ type AuthModelManager interface {
 	ValidateToken(ctx context.Context, token string) (bool, error)
 }
 
-type authServer struct {
-	a AuthModelManager
+type AuthServer struct {
+	A AuthModelManager
 }
 
 func isPasswordValid(s string) bool {
@@ -74,7 +75,7 @@ func IsLoginPswdValid(login string, password string) bool {
 	return isLoginValid(login) && isPasswordValid(password)
 }
 
-func (s *authServer) Register(c *gin.Context) {
+func (s *AuthServer) Register(c *gin.Context) {
 	token := c.Query("token")
 	login := c.Query("login")
 	pswd := c.Query("pswd")
@@ -85,7 +86,7 @@ func (s *authServer) Register(c *gin.Context) {
 	if cfg.Admin.Token != token { // It's not admin
 		lgr.Info("Not admin", "authServer", "Register", "")
 
-		c.JSON(http.StatusForbidden, ErrResponse{Err: ErrBody{
+		c.JSON(http.StatusForbidden, structs2.ErrResponse{Err: structs2.ErrBody{
 			Code: 403,
 			Text: "Not admin",
 		}})
@@ -94,7 +95,7 @@ func (s *authServer) Register(c *gin.Context) {
 	if !IsLoginPswdValid(login, pswd) { // bad password or login
 		lgr.Info("Bad pass or login", "authServer", "Register", "IsLoginPswdValid")
 
-		c.JSON(http.StatusBadRequest, ErrResponse{Err: ErrBody{
+		c.JSON(http.StatusBadRequest, structs2.ErrResponse{Err: structs2.ErrBody{
 			Code: 400,
 			Text: "Bad pass or login",
 		}})
@@ -110,7 +111,7 @@ func (s *authServer) Register(c *gin.Context) {
 	if status == http.StatusBadRequest {
 		lgr.Info("item already exists", "authServer", "Register", "register")
 
-		c.JSON(status, ErrResponse{Err: ErrBody{
+		c.JSON(status, structs2.ErrResponse{Err: structs2.ErrBody{
 			Code: status,
 			Text: "User already exists",
 		}})
@@ -118,20 +119,20 @@ func (s *authServer) Register(c *gin.Context) {
 	}
 	if status == http.StatusInternalServerError {
 		lgr.Error("internal server error", "authServer", "Register", "register")
-		c.JSON(status, ErrResponse{Err: ErrBody{
+		c.JSON(status, structs2.ErrResponse{Err: structs2.ErrBody{
 			Code: status,
 			Text: "Internal server error",
 		}})
 		return
 	}
 
-	c.JSON(http.StatusOK, RegisterResp{RegisterRespBody{login}})
+	c.JSON(http.StatusOK, structs2.RegisterResp{structs2.RegisterRespBody{login}})
 }
 
-func (s *authServer) register(ctx context.Context, info structs.RegisterUserInfo) int {
+func (s *AuthServer) register(ctx context.Context, info structs.RegisterUserInfo) int {
 	lgr := logger.GetLogger()
 
-	err := s.a.RegisterUser(ctx, info)
+	err := s.A.RegisterUser(ctx, info)
 	if err != nil {
 		if errors.Is(err, models.ErrConflict) {
 			return http.StatusBadRequest
@@ -145,7 +146,7 @@ func (s *authServer) register(ctx context.Context, info structs.RegisterUserInfo
 	return http.StatusOK
 }
 
-func (s *authServer) Auth(c *gin.Context) {
+func (s *AuthServer) Auth(c *gin.Context) {
 	lgr := logger.GetLogger()
 
 	login := c.PostForm("login")
@@ -154,7 +155,7 @@ func (s *authServer) Auth(c *gin.Context) {
 	if !IsLoginPswdValid(login, pswd) { // bad password or login
 		lgr.Info("Bad pass or login", "authServer", "Auth", "")
 
-		c.JSON(http.StatusBadRequest, ErrResponse{Err: ErrBody{
+		c.JSON(http.StatusBadRequest, structs2.ErrResponse{Err: structs2.ErrBody{
 			Code: 400,
 			Text: "Bad pass or login",
 		}})
@@ -172,38 +173,38 @@ func (s *authServer) Auth(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, AuthResp{AuthRespBody{token}})
+	c.JSON(http.StatusOK, structs2.AuthResp{structs2.AuthRespBody{token}})
 }
 
-func (s *authServer) auth(ctx context.Context, info structs.AuthUserInfo) (string, int, ErrResponse) {
+func (s *AuthServer) auth(ctx context.Context, info structs.AuthUserInfo) (string, int, structs2.ErrResponse) {
 	lgr := logger.GetLogger()
 
-	token, err := s.a.LoginUser(ctx, info)
+	token, err := s.A.LoginUser(ctx, info)
 	if err != nil {
 		if errors.Is(err, models.ErrBadCredentials) {
-			return "", http.StatusBadRequest, ErrResponse{Err: ErrBody{
+			return "", http.StatusBadRequest, structs2.ErrResponse{Err: structs2.ErrBody{
 				Code: 400,
 				Text: "Wrong pass or login",
 			}}
 		}
 		if errors.Is(err, models.ErrConflict) {
-			return "", http.StatusBadRequest, ErrResponse{Err: ErrBody{
+			return "", http.StatusBadRequest, structs2.ErrResponse{Err: structs2.ErrBody{
 				Code: 400,
 				Text: "Generated duplicated token",
 			}}
 		}
 
 		lgr.Error(err.Error(), "authServer", "auth", "LoginUser")
-		return "", http.StatusInternalServerError, ErrResponse{Err: ErrBody{
+		return "", http.StatusInternalServerError, structs2.ErrResponse{Err: structs2.ErrBody{
 			Code: 500,
 			Text: "Internal server error",
 		}}
 	}
 
-	return token, http.StatusOK, ErrResponse{}
+	return token, http.StatusOK, structs2.ErrResponse{}
 }
 
-func (s *authServer) Logout(c *gin.Context) {
+func (s *AuthServer) Logout(c *gin.Context) {
 	lgr := logger.GetLogger()
 
 	tokenP := c.Param("token")
@@ -215,11 +216,11 @@ func (s *authServer) Logout(c *gin.Context) {
 		return
 	}
 
-	newData, err := jsoniter.Marshal(LogoutResp{jsoniter.RawMessage(fmt.Sprintf("{\"%s\":true}", token))})
+	newData, err := jsoniter.Marshal(structs2.LogoutResp{jsoniter.RawMessage(fmt.Sprintf("{\"%s\":true}", token))})
 	if err != nil {
 		lgr.Error(err.Error(), "authServer", "Logout", "soniter.Marshal")
 
-		c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
+		c.JSON(http.StatusInternalServerError, structs2.ErrResponse{Err: structs2.ErrBody{
 			Code: 500,
 			Text: "Can't marshal JSON",
 		}})
@@ -231,7 +232,7 @@ func (s *authServer) Logout(c *gin.Context) {
 	if err != nil {
 		lgr.Error(err.Error(), "authServer", "Logout", "soniter.Unmarshal")
 
-		c.JSON(http.StatusInternalServerError, ErrResponse{Err: ErrBody{
+		c.JSON(http.StatusInternalServerError, structs2.ErrResponse{Err: structs2.ErrBody{
 			Code: 500,
 			Text: "Can't unmarshal JSON",
 		}})
@@ -241,22 +242,22 @@ func (s *authServer) Logout(c *gin.Context) {
 	c.JSON(status, tmp)
 }
 
-func (s *authServer) logout(ctx context.Context, token string) (string, int, ErrResponse) {
+func (s *AuthServer) logout(ctx context.Context, token string) (string, int, structs2.ErrResponse) {
 	// Здесь валидировать токен не нужно, поскольку, например, при истечении срока годности пользователь не сможет выйти
 	// В противном случае если попытаться удалить несуществующий токен, то это нормально.
 
-	err := s.a.LogoutUser(ctx, token)
+	err := s.A.LogoutUser(ctx, token)
 	if err != nil {
 		if errors.Is(err, models.ErrTokenNotFound) {
-			return "", http.StatusNotFound, ErrResponse{Err: ErrBody{
+			return "", http.StatusNotFound, structs2.ErrResponse{Err: structs2.ErrBody{
 				Code: 400,
 				Text: "Token not found",
 			}}
 		}
-		return "", http.StatusInternalServerError, ErrResponse{Err: ErrBody{
+		return "", http.StatusInternalServerError, structs2.ErrResponse{Err: structs2.ErrBody{
 			Code: 500,
 			Text: "Internal server error",
 		}}
 	}
-	return token, http.StatusOK, ErrResponse{}
+	return token, http.StatusOK, structs2.ErrResponse{}
 }
