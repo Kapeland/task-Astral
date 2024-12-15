@@ -16,6 +16,11 @@ database:
   sslmode: disable
   migrations: postgres/migrations
 
+redis:
+  host: "redis"
+  port: 6379
+  db: 0
+
 admin:
   token: "T8UrXXFxHTxkW?x2PP-0fyfsYzDsxo7RwH6FNcZK=tX759FG!QxBQMGGkpVEBdVb"
 

@@ -8,6 +8,37 @@ services:
       - "${POSTGRES_EXPORT_PORT}:5432"
     networks:
       - project
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "$POSTGRES_DB", "-U", "$POSTGRES_USER" ]
+      timeout: 45s
+      interval: 10s
+      retries: 10
+
+  redis:
+    image: redis/redis-stack:latest
+    env_file:
+      - .env
+    restart: "unless-stopped"
+    ports:
+      - "${REDIS_EXPORT_PORT}:6379"
+      - "${REDIS_INSIGHT_EXPORT_PORT}:8001"
+    networks:
+      - project
+    deploy:
+      resources:
+        limits:
+#          cpus: '0.50'
+          memory: 256M
+#        reservations:
+#          cpus: '0.25'
+#          memory: 256M
+    healthcheck:
+#      test: [ "CMD", "redis-cli", "-a", "$REDIS_PASSWORD", "ping" ]
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
 
   project:
     build:
@@ -16,10 +47,14 @@ services:
     env_file:
       - .env
     restart: "unless-stopped"
+    links:
+      - postgres
+      - redis
     ports:
       - "${PROJECT_EXPORT_PORT}:8080"
     depends_on:
       - postgres
+      - redis
     networks:
       - project
 

@@ -37,6 +37,13 @@ type Database struct {
 	SslMode    string `yaml:"sslmode"`
 }
 
+// Redis - contains all parameters redis connection.
+type Redis struct {
+	Host string `yaml:"host"`
+	Port int    `yaml:"port"`
+	DB   int    `yaml:"db"`
+}
+
 // Admin - contains admin's token
 type Admin struct {
 	Token string `yaml:"token"`
@@ -57,6 +64,7 @@ type Config struct {
 	Project  Project  `yaml:"project"`
 	Rest     Rest     `yaml:"rest"`
 	Database Database `yaml:"database"`
+	Redis    Redis    `yaml:"redis"`
 	Admin    Admin    `yaml:"admin"`
 	Logger   Logger   `yaml:"logger"`
 }
