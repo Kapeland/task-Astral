@@ -8,7 +8,7 @@ migration-create:
 # run in docker
 .PHONY: docker-run
 docker-run:
-	docker compose up --build postgres project
+	docker compose up --build
 
 # build app
 .PHONY: build
