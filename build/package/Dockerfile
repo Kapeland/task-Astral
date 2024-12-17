@@ -1,7 +1,7 @@
 # Builder
 
 FROM golang:1.22-alpine AS builder
-RUN apk add --update make git curl
+RUN apk add --update curl git make && apk cache clean
 
 ARG MODULE_NAME=github.com/Kapeland/task-Astral
 
@@ -24,8 +24,7 @@ WORKDIR /root/
 COPY --from=builder /home/${MODULE_NAME}/bin/main .
 COPY --from=builder /home/${MODULE_NAME}/configs ./configs
 
-RUN mkdir ./file-storage
-RUN mkdir ./file-storage/json
+RUN mkdir -p file-storage/json
 
 COPY --from=builder /home/${MODULE_NAME}/internal/storage/db/migrations ./postgres/migrations
 
