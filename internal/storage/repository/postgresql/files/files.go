@@ -22,38 +22,6 @@ func New(db db.DBops) *Repo {
 	return &Repo{db: db}
 }
 
-func (m *Repo) AddGrants(ctx context.Context, docID string, userLogin string) error {
-	tx, err := m.db.(*db.PgDatabase).BeginX(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	_, err = tx.ExecContext(ctx,
-		`INSERT INTO documentaccess(document_id, login)
-				VALUES($1,$2) returning id;`, docID, userLogin)
-
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		var pgErr *pgconn.PgError
-		errors.As(err, &pgErr)
-		if pgErr.Code == "23505" {
-			return repository.ErrDuplicateKey
-		}
-		if pgErr.Code == "23503" {
-			return repository.ErrAddGrantToLogin
-		}
-		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		slog.Info("Looks like the context has been closed")
-		slog.Error(err.Error())
-		return err
-	}
-
-	return nil
-}
-
 // GetAllDocsByOwner returns all docs belonging to an owner from postgres
 func (m *Repo) GetAllDocsByOwner(ctx context.Context, listInfo structs.ListInfo, ownerLogin string, own bool) ([]structs.DocEntry, error) {
 	filter := listInfo.Value
@@ -205,36 +173,54 @@ func (m *Repo) DelDoc(ctx context.Context, docID string, userLogin string) (stru
 }
 
 // PostNewDoc add doc info to postgres
-func (m *Repo) PostNewDoc(ctx context.Context, file *structs.File, owner string) (string, error) {
+func (m *Repo) PostNewDoc(ctx context.Context, file *structs.File, owner string) error {
 	//TODO: По сути тут не учитывается есть ли такой документ. Хотя дальше это предполагается.
-	id := ""
+	docID := ""
 
 	tx, err := m.db.(*db.PgDatabase).BeginX(ctx, nil)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer tx.Rollback()
 
 	err = tx.QueryRowContext(ctx,
 		`INSERT INTO documents(title, content, mime, owner, is_public, created_at, file)
-				VALUES($1,$2,$3,$4,$5,$6,$7) returning id;`, file.Meta.Name, string(file.Json), file.Meta.Mime, owner, file.Meta.Public, time.Now(), file.Meta.File).Scan(&id)
+				VALUES($1,$2,$3,$4,$5,$6,$7) returning id;`, file.Meta.Name, string(file.Json), file.Meta.Mime, owner, file.Meta.Public, time.Now(), file.Meta.File).Scan(&docID)
 
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		var pgErr *pgconn.PgError
 		errors.As(err, &pgErr)
 		if pgErr.Code == "23505" {
-			return "", repository.ErrDuplicateKey
+			return repository.ErrDuplicateKey
 		}
-		return "", err
+		return err
+	}
+	for _, login := range file.Meta.Grant {
+		_, err = tx.ExecContext(ctx,
+			`INSERT INTO documentaccess(document_id, login)
+				VALUES($1,$2);`, docID, login)
+
+		if err != nil {
+			var pgErr *pgconn.PgError
+			errors.As(err, &pgErr)
+			switch pgErr.Code {
+			case "23503":
+				return repository.ErrAddGrantToLogin
+			case "23505":
+				return repository.ErrDuplicateKey
+			default:
+				return err
+			}
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
 		slog.Info("Looks like the context has been closed")
 		slog.Error(err.Error())
-		return "", err
+		return err
 	}
 
-	return id, nil
+	return nil
 }
 
 func (m *Repo) GetGrantsByDocID(ctx context.Context, docID string) ([]string, error) {

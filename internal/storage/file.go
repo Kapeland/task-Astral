@@ -12,8 +12,7 @@ import (
 type FileRepo interface {
 	GetAllDocsByOwner(ctx context.Context, listInfo structs.ListInfo, ownerLogin string, own bool) ([]structs.DocEntry, error)
 	DelDoc(ctx context.Context, docID string, userLogin string) (structs.RmDoc, error)
-	PostNewDoc(ctx context.Context, file *structs.File, owner string) (string, error)
-	AddGrants(ctx context.Context, docID string, userLogin string) error
+	PostNewDoc(ctx context.Context, file *structs.File, owner string) error
 	GetGrantsByDocID(ctx context.Context, docID string) ([]string, error)
 	GetDoc(ctx context.Context, docID string) (*structs.GetDoc, error)
 }
@@ -43,31 +42,15 @@ func (m *FileStorage) DeleteDoc(ctx context.Context, docID string, userLogin str
 }
 
 func (m *FileStorage) AddDoc(ctx context.Context, doc structs.File, owner string, logins []string) error {
-	docID, err := m.fr.PostNewDoc(ctx, &doc, owner)
+	err := m.fr.PostNewDoc(ctx, &doc, owner)
 	if err != nil {
 		if errors.Is(err, repository.ErrDuplicateKey) {
 			return models.ErrConflict
 		}
-
-		return err
-	}
-
-	for _, login := range logins {
-		err := m.fr.AddGrants(ctx, docID, login)
-		if err != nil {
-			if errors.Is(err, repository.ErrDuplicateKey) {
-				return models.ErrConflict
-			}
-			if errors.Is(err, repository.ErrAddGrantToLogin) {
-				m.fr.DelDoc(ctx, docID, owner)
-				// По идее не может вернуть ошибку, поскольку мы только что точно успешно добавили документ
-
-				return models.ErrInvalidInput
-			}
-
-			return err
+		if errors.Is(err, repository.ErrAddGrantToLogin) {
+			return models.ErrInvalidInput
 		}
-
+		return err
 	}
 
 	return nil
