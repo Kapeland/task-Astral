@@ -8,7 +8,6 @@ import (
 	"github.com/Kapeland/task-Astral/internal/utils/logger"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 )
 
 // NewPostgres create new db
@@ -88,4 +87,14 @@ func (db PgDatabase) Close() {
 // GetDB returns undrlying db
 func (db PgDatabase) GetDB() *sqlx.DB {
 	return db.db
+}
+
+// Begin begins transaction
+func (db PgDatabase) Begin(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
+	return db.db.BeginTx(ctx, opts)
+}
+
+// BeginX begins transaction
+func (db PgDatabase) BeginX(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error) {
+	return db.db.BeginTxx(ctx, opts)
 }
