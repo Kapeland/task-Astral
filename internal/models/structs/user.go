@@ -18,8 +18,7 @@ type AuthUserInfo struct {
 	Pswd  string `json:"pswd"`
 }
 
-// UserSecretDTO dto
-type UserSecretDTO struct {
+type UserSecret struct {
 	Login      string    `db:"login"`
 	ValidUntil time.Time `db:"valid_until"`
 	Token      string    `db:"token"`

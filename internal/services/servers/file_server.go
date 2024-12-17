@@ -16,10 +16,10 @@ import (
 )
 
 type FileModelManager interface {
-	AddNewDoc(ctx context.Context, docDTO structs.FileDTO) error
+	AddNewDoc(ctx context.Context, doc structs.File) error
 	DeleteDoc(ctx context.Context, token string, docID string) (structs.RmDoc, error)
 	GetDocs(ctx context.Context, listInfo structs.ListInfo) ([]structs.DocEntry, error)
-	GetDoc(ctx context.Context, token string, docID string) (structs.GetDocDTO, error)
+	GetDoc(ctx context.Context, token string, docID string) (structs.GetDoc, error)
 }
 
 type FileServer struct {
@@ -134,8 +134,8 @@ func (s *FileServer) UploadDoc(c *gin.Context) {
 func (s *FileServer) uploadDoc(ctx context.Context, doc svStruct.AddDocForm) (int, svStruct.ErrResponse) {
 	lgr := logger.GetLogger()
 
-	err := s.F.AddNewDoc(ctx, structs.FileDTO{
-		Meta: structs.DocMetaDTO(doc.Meta),
+	err := s.F.AddNewDoc(ctx, structs.File{
+		Meta: structs.DocMeta(doc.Meta),
 		Json: doc.Json,
 	})
 	if err != nil {
@@ -358,26 +358,26 @@ func (s *FileServer) GetDoc(c *gin.Context) {
 
 }
 
-func (s *FileServer) getDoc(ctx context.Context, token string, docID string) (structs.GetDocDTO, int, svStruct.ErrResponse) {
+func (s *FileServer) getDoc(ctx context.Context, token string, docID string) (structs.GetDoc, int, svStruct.ErrResponse) {
 	lgr := logger.GetLogger()
 
 	doc, err := s.F.GetDoc(ctx, token, docID)
 	if err != nil {
 		if errors.Is(err, models.ErrNotFound) {
-			return structs.GetDocDTO{}, http.StatusBadRequest, svStruct.ErrResponse{Err: svStruct.ErrBody{
+			return structs.GetDoc{}, http.StatusBadRequest, svStruct.ErrResponse{Err: svStruct.ErrBody{
 				Code: 400,
 				Text: "Looks like there is no such document",
 			}}
 		}
 		if errors.Is(err, models.ErrForbidden) {
-			return structs.GetDocDTO{}, http.StatusForbidden, svStruct.ErrResponse{Err: svStruct.ErrBody{
+			return structs.GetDoc{}, http.StatusForbidden, svStruct.ErrResponse{Err: svStruct.ErrBody{
 				Code: 403,
 				Text: "Forbidden",
 			}}
 		}
 		lgr.Error(err.Error(), "fileServer", "getDoc", "GetDoc")
 
-		return structs.GetDocDTO{}, http.StatusInternalServerError, svStruct.ErrResponse{Err: svStruct.ErrBody{
+		return structs.GetDoc{}, http.StatusInternalServerError, svStruct.ErrResponse{Err: svStruct.ErrBody{
 			Code: 500,
 			Text: "Internal server error during getting document",
 		}}

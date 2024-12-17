@@ -13,12 +13,12 @@ import (
 )
 
 type AuthStorager interface {
-	GetUserSecretByLogin(ctx context.Context, login string) (structs.UserSecretDTO, error)
-	CreateUserSecret(ctx context.Context, secretDTO structs.UserSecretDTO) error
-	UpdateUserSecret(ctx context.Context, secretDTO structs.UserSecretDTO) error
+	GetUserSecretByLogin(ctx context.Context, login string) (structs.UserSecret, error)
+	CreateUserSecret(ctx context.Context, userSecret structs.UserSecret) error
+	UpdateUserSecret(ctx context.Context, userSecret structs.UserSecret) error
 	DeleteUserSecret(ctx context.Context, token string) error
 	GetUserLoginBySecret(ctx context.Context, secret string) (string, error)
-	GetUserSecretBySecret(ctx context.Context, token string) (structs.UserSecretDTO, error)
+	GetUserSecretBySecret(ctx context.Context, token string) (structs.UserSecret, error)
 }
 
 const validHoursNum = 24
@@ -153,13 +153,13 @@ func genKey(length int) (string, error) {
 	}
 }
 
-func genUserSecret(login string) (structs.UserSecretDTO, error) {
+func genUserSecret(login string) (structs.UserSecret, error) {
 	key, err := genKey(64)
 	if err != nil {
-		return structs.UserSecretDTO{}, err
+		return structs.UserSecret{}, err
 	}
 
-	userSecret := structs.UserSecretDTO{
+	userSecret := structs.UserSecret{
 		Login:      login,
 		Token:      key,
 		ValidUntil: time.Now().Add(time.Hour * validHoursNum),

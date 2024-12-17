@@ -12,10 +12,10 @@ import (
 type FileRepo interface {
 	GetAllDocsByOwner(ctx context.Context, listInfo structs.ListInfo, ownerLogin string, own bool) ([]structs.DocEntry, error)
 	DelDoc(ctx context.Context, docID string, userLogin string) (structs.RmDoc, error)
-	PostNewDoc(ctx context.Context, fileDTO *structs.FileDTO, owner string) (string, error)
+	PostNewDoc(ctx context.Context, file *structs.File, owner string) (string, error)
 	AddGrants(ctx context.Context, docID string, userLogin string) error
 	GetGrantsByDocID(ctx context.Context, docID string) ([]string, error)
-	GetDoc(ctx context.Context, docID string) (*structs.GetDocDTO, error)
+	GetDoc(ctx context.Context, docID string) (*structs.GetDoc, error)
 }
 
 type FileStorage struct {
@@ -42,8 +42,8 @@ func (m *FileStorage) DeleteDoc(ctx context.Context, docID string, userLogin str
 	return doc, nil
 }
 
-func (m *FileStorage) AddDoc(ctx context.Context, docDTO structs.FileDTO, owner string, logins []string) error {
-	docID, err := m.fr.PostNewDoc(ctx, &docDTO, owner)
+func (m *FileStorage) AddDoc(ctx context.Context, doc structs.File, owner string, logins []string) error {
+	docID, err := m.fr.PostNewDoc(ctx, &doc, owner)
 	if err != nil {
 		if errors.Is(err, repository.ErrDuplicateKey) {
 			return models.ErrConflict
@@ -98,13 +98,13 @@ func (m *FileStorage) GetDocsByOwner(ctx context.Context, listInfo structs.ListI
 	return docs, nil
 }
 
-func (m *FileStorage) GetDoc(ctx context.Context, docID string) (structs.GetDocDTO, error) {
+func (m *FileStorage) GetDoc(ctx context.Context, docID string) (structs.GetDoc, error) {
 	doc, err := m.fr.GetDoc(ctx, docID)
 	if err != nil {
 		if errors.Is(err, repository.ErrObjectNotFound) {
-			return structs.GetDocDTO{}, models.ErrNotFound
+			return structs.GetDoc{}, models.ErrNotFound
 		}
-		return structs.GetDocDTO{}, err
+		return structs.GetDoc{}, err
 	}
 
 	return *doc, nil

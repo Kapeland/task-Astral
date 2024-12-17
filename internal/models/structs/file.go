@@ -5,8 +5,7 @@ import (
 	"time"
 )
 
-// GetDocDTO dto
-type GetDocDTO struct {
+type GetDoc struct {
 	Mime   string `db:"mime" json:"mime"`
 	Name   string `db:"title" json:"title"`
 	Public bool   `db:"is_public" json:"public"`
@@ -14,12 +13,11 @@ type GetDocDTO struct {
 	IsFile bool   `db:"file" json:"is_file"`
 }
 
-// FileDTO dto
-type FileDTO struct {
-	Meta DocMetaDTO
+type File struct {
+	Meta DocMeta
 	Json jsoniter.RawMessage
 }
-type DocMetaDTO struct {
+type DocMeta struct {
 	Name   string   `json:"name"`
 	File   bool     `json:"file"`
 	Public bool     `json:"public"`

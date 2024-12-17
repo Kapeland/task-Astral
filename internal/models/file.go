@@ -7,19 +7,19 @@ import (
 )
 
 type FileStorager interface {
-	AddDoc(ctx context.Context, docDTO structs.FileDTO, owner string, logins []string) error
+	AddDoc(ctx context.Context, doc structs.File, owner string, logins []string) error
 	DeleteDoc(ctx context.Context, docID string, userLogin string) (structs.RmDoc, error)
 	GetDocsByOwner(ctx context.Context, listInfo structs.ListInfo, ownerLogin string, own bool) ([]structs.DocEntry, error)
-	GetDoc(ctx context.Context, docID string) (structs.GetDocDTO, error)
+	GetDoc(ctx context.Context, docID string) (structs.GetDoc, error)
 }
 
-func (m *ModelFiles) AddNewDoc(ctx context.Context, docDTO structs.FileDTO) error {
-	login, err := m.as.GetUserLoginBySecret(ctx, docDTO.Meta.Token)
+func (m *ModelFiles) AddNewDoc(ctx context.Context, doc structs.File) error {
+	login, err := m.as.GetUserLoginBySecret(ctx, doc.Meta.Token)
 	if err != nil {
 		return err
 	}
 
-	err = m.fs.AddDoc(ctx, docDTO, login, docDTO.Meta.Grant)
+	err = m.fs.AddDoc(ctx, doc, login, doc.Meta.Grant)
 	if err != nil {
 		return err
 	}
@@ -68,21 +68,21 @@ func (m *ModelFiles) GetDocs(ctx context.Context, listInfo structs.ListInfo) ([]
 
 }
 
-func (m *ModelFiles) GetDoc(ctx context.Context, token string, docID string) (structs.GetDocDTO, error) {
+func (m *ModelFiles) GetDoc(ctx context.Context, token string, docID string) (structs.GetDoc, error) {
 	login, err := m.as.GetUserLoginBySecret(ctx, token)
 	if err != nil {
-		return structs.GetDocDTO{}, err
+		return structs.GetDoc{}, err
 	}
 
 	doc, err := m.fs.GetDoc(ctx, docID)
 	if err != nil {
-		return structs.GetDocDTO{}, err
+		return structs.GetDoc{}, err
 	}
 	if doc.Owner == login { // Это наш документ
 		return doc, nil
 	} else {
 		if !doc.Public { // Значит не наш документ и закрытый
-			return structs.GetDocDTO{}, ErrForbidden
+			return structs.GetDoc{}, ErrForbidden
 		}
 	}
 

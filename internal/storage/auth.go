@@ -9,12 +9,12 @@ import (
 )
 
 type AuthRepo interface {
-	CreateUserSecret(ctx context.Context, secretDTO *structs.UserSecretDTO) error
-	GetSecretByLogin(ctx context.Context, login string) (*structs.UserSecretDTO, error)
-	UpdateUserSecret(ctx context.Context, secretDTO *structs.UserSecretDTO) error
+	CreateUserSecret(ctx context.Context, userSecret *structs.UserSecret) error
+	GetSecretByLogin(ctx context.Context, login string) (*structs.UserSecret, error)
+	UpdateUserSecret(ctx context.Context, userSecret *structs.UserSecret) error
 	DeleteUserSecret(ctx context.Context, token string) error
 	GetLoginBySecret(ctx context.Context, secret string) (string, error)
-	GetSecretBySecret(ctx context.Context, token string) (*structs.UserSecretDTO, error)
+	GetSecretBySecret(ctx context.Context, token string) (*structs.UserSecret, error)
 }
 
 type AuthStorage struct {
@@ -40,21 +40,21 @@ func (s *AuthStorage) GetUserLoginBySecret(ctx context.Context, secret string) (
 
 // GetUserSecretByLogin secret
 // Returns models.ErrNotFound or err
-func (s *AuthStorage) GetUserSecretByLogin(ctx context.Context, login string) (structs.UserSecretDTO, error) {
-	secretDTO, err := s.authRepo.GetSecretByLogin(ctx, login)
+func (s *AuthStorage) GetUserSecretByLogin(ctx context.Context, login string) (structs.UserSecret, error) {
+	userSecret, err := s.authRepo.GetSecretByLogin(ctx, login)
 	if err != nil {
 		if errors.Is(err, repository.ErrObjectNotFound) {
-			return structs.UserSecretDTO{}, models.ErrNotFound
+			return structs.UserSecret{}, models.ErrNotFound
 		}
-		return structs.UserSecretDTO{}, err
+		return structs.UserSecret{}, err
 	}
-	return *secretDTO, nil
+	return *userSecret, nil
 }
 
 // CreateUserSecret secret
 // Returns models.ErrConflict or err
-func (s *AuthStorage) CreateUserSecret(ctx context.Context, secretDTO structs.UserSecretDTO) error {
-	err := s.authRepo.CreateUserSecret(ctx, &secretDTO)
+func (s *AuthStorage) CreateUserSecret(ctx context.Context, userSecret structs.UserSecret) error {
+	err := s.authRepo.CreateUserSecret(ctx, &userSecret)
 	if err != nil {
 		if errors.Is(err, repository.ErrDuplicateKey) {
 			return models.ErrConflict
@@ -79,8 +79,8 @@ func (s *AuthStorage) DeleteUserSecret(ctx context.Context, token string) error 
 
 // UpdateUserSecret secret
 // Returns models.ErrConflict or err
-func (s *AuthStorage) UpdateUserSecret(ctx context.Context, secretDTO structs.UserSecretDTO) error {
-	err := s.authRepo.UpdateUserSecret(ctx, &secretDTO)
+func (s *AuthStorage) UpdateUserSecret(ctx context.Context, userSecret structs.UserSecret) error {
+	err := s.authRepo.UpdateUserSecret(ctx, &userSecret)
 	if err != nil {
 		if errors.Is(err, repository.ErrDuplicateKey) {
 			return models.ErrConflict
@@ -92,13 +92,13 @@ func (s *AuthStorage) UpdateUserSecret(ctx context.Context, secretDTO structs.Us
 
 // GetUserSecretBySecret secret.
 // Returns models.ErrNotFound or err
-func (s *AuthStorage) GetUserSecretBySecret(ctx context.Context, token string) (structs.UserSecretDTO, error) {
-	secretDTO, err := s.authRepo.GetSecretBySecret(ctx, token)
+func (s *AuthStorage) GetUserSecretBySecret(ctx context.Context, token string) (structs.UserSecret, error) {
+	userSecret, err := s.authRepo.GetSecretBySecret(ctx, token)
 	if err != nil {
 		if errors.Is(err, repository.ErrObjectNotFound) {
-			return structs.UserSecretDTO{}, models.ErrNotFound
+			return structs.UserSecret{}, models.ErrNotFound
 		}
-		return structs.UserSecretDTO{}, err
+		return structs.UserSecret{}, err
 	}
-	return *secretDTO, nil
+	return *userSecret, nil
 }
